@@ -1,0 +1,8 @@
+[package]
+name = "gol"
+description = "Game of life"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "*"
