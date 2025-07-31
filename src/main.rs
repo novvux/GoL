@@ -7,7 +7,7 @@ struct Grid {
 }
 
 impl Grid {
-    fn init(height: usize, width: usize) -> Grid {
+    fn new(height: usize, width: usize) -> Grid {
         Grid {
             width,
             height,
@@ -28,7 +28,7 @@ impl Grid {
         if x < self.width && y < self.height {
             self.grid[y][x]
         } else {
-            false
+            self.grid[y % self.height][x % self.width]
         }
     }
 
@@ -51,38 +51,54 @@ impl Grid {
         let mut next_buf = self.grid.clone();
         for y in 0..self.height {
             for x in 0..self.width {
-                next_buf[y][x] = match (self.grid[y][x], self.neighbors(x, y)) {
+                next_buf[y][x] = match (self.get(x, y), self.neighbors(x, y)) {
                     (true, 2) | (true, 3) => true,
                     (false, 3) => true,
                     _ => false,
                 };
             }
         }
-        self.grid = next_buf
+        if self.grid == next_buf {
+            self.end();
+        } else {
+            self.grid = next_buf
+        }
     }
 
     fn toggle(&mut self, x: usize, y: usize) {
         self.grid[y][x] = !self.grid[y][x]
     }
+
+    fn end(&self) {
+        println!("No more moves");
+        std::process::exit(0)
+    }
 }
 
 fn main() {
-    let mut grid = Grid::init(5, 50);
-    grid.randomize();
+    /*let termsize::Size { rows, cols } = termsize::get().unwrap();
+    println!("          width  height");
+    println!("termion:  {:4}    {:4}", cols, rows);*/
+
+    //let mut grid = Grid::new(rows as usize, cols as usize);
+    let mut grid = Grid::new(16, 16);
 
     grid.toggle(2, 2);
-    grid.toggle(3, 2);
-    grid.toggle(4, 2);
+    grid.toggle(2, 3);
+    grid.toggle(2, 4);
+    grid.toggle(1, 4);
+    grid.toggle(0, 3);
 
     loop {
         for y in 0..grid.height {
             for x in 0..grid.width {
-                print!("{}", if grid.grid[y][x] { "*" } else { " " });
+                print!("{}", if grid.grid[y][x] { "■" } else { "◦" });
             }
             println!();
         }
+        println!();
         grid.switch();
         //std::io::stdin().read_line(&mut String::new());
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(250));
     }
 }
