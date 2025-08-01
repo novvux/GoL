@@ -25,11 +25,7 @@ impl Grid {
     }
 
     fn get(&self, x: usize, y: usize) -> bool {
-        if x < self.width && y < self.height {
-            self.grid[y][x]
-        } else {
-            self.grid[y % self.height][x % self.width]
-        }
+        self.grid[y % self.height][x % self.width]
     }
 
     fn neighbors(&self, x: usize, y: usize) -> u8 {
@@ -39,7 +35,9 @@ impl Grid {
                 if dx == 0 && dy == 0 {
                     continue;
                 }
-                if self.get(((x as isize) + dx) as usize, ((y as isize) + dy) as usize) {
+                if self.grid[((y as isize + dy).rem_euclid(self.height as isize)) as usize]
+                    [((x as isize + dx).rem_euclid(self.width as isize)) as usize]
+                {
                     count += 1;
                 }
             }
@@ -66,7 +64,7 @@ impl Grid {
     }
 
     fn toggle(&mut self, x: usize, y: usize) {
-        self.grid[y][x] = !self.grid[y][x]
+        self.grid[y % self.height][x % self.width] = !self.grid[y % self.height][x % self.width]
     }
 
     fn end(&self) {
@@ -81,9 +79,9 @@ fn main() {
     println!("termion:  {:4}    {:4}", cols, rows);*/
 
     //let mut grid = Grid::new(rows as usize, cols as usize);
-    let mut grid = Grid::new(16, 16);
+    let mut grid = Grid::new(18, 18);
 
-    grid.toggle(2, 2);
+    grid.toggle(20, 2);
     grid.toggle(2, 3);
     grid.toggle(2, 4);
     grid.toggle(1, 4);
@@ -92,7 +90,7 @@ fn main() {
     loop {
         for y in 0..grid.height {
             for x in 0..grid.width {
-                print!("{}", if grid.grid[y][x] { "■" } else { "◦" });
+                print!("{}", if grid.get(x, y) { "■" } else { "◦" });
             }
             println!();
         }
