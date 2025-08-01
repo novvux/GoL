@@ -1,102 +1,118 @@
-use rand::{Rng, rng};
+mod grid;
+use std::{env, time::Duration};
 
-struct Grid {
-    width: usize,
+#[derive(Debug)]
+struct Settings {
     height: usize,
-    grid: Vec<Vec<bool>>,
+    width: usize,
+    speed: Duration,
+    random: bool,
 }
 
-impl Grid {
-    fn new(height: usize, width: usize) -> Grid {
-        Grid {
-            width,
-            height,
-            grid: vec![vec![false; width]; height],
+impl Settings {
+    pub fn init() -> Settings {
+        //let termsize::Size { rows, cols } = termsize::get().unwrap();
+        Settings {
+            height: 16, //rows as usize,
+            width: 16,  //(cols - 1) as usize,
+            speed: Duration::from_millis(250),
+            random: true,
         }
-    }
-
-    fn randomize(&mut self) {
-        let mut rng = rng();
-        for y in 0..self.height {
-            for x in 0..self.width {
-                self.grid[y][x] = rng.random_bool(0.5);
-            }
-        }
-    }
-
-    fn get(&self, x: usize, y: usize) -> bool {
-        self.grid[y % self.height][x % self.width]
-    }
-
-    fn neighbors(&self, x: usize, y: usize) -> u8 {
-        let mut count = 0;
-        for dy in -1..=1 {
-            for dx in -1..=1 {
-                if dx == 0 && dy == 0 {
-                    continue;
-                }
-                if self.grid[((y as isize + dy).rem_euclid(self.height as isize)) as usize]
-                    [((x as isize + dx).rem_euclid(self.width as isize)) as usize]
-                {
-                    count += 1;
-                }
-            }
-        }
-        count
-    }
-
-    fn switch(&mut self) {
-        let mut next_buf = self.grid.clone();
-        for y in 0..self.height {
-            for x in 0..self.width {
-                next_buf[y][x] = match (self.get(x, y), self.neighbors(x, y)) {
-                    (true, 2) | (true, 3) => true,
-                    (false, 3) => true,
-                    _ => false,
-                };
-            }
-        }
-        if self.grid == next_buf {
-            self.end();
-        } else {
-            self.grid = next_buf
-        }
-    }
-
-    fn toggle(&mut self, x: usize, y: usize) {
-        self.grid[y % self.height][x % self.width] = !self.grid[y % self.height][x % self.width]
-    }
-
-    fn end(&self) {
-        println!("No more moves");
-        std::process::exit(0)
     }
 }
 
 fn main() {
-    /*let termsize::Size { rows, cols } = termsize::get().unwrap();
-    println!("          width  height");
-    println!("termion:  {:4}    {:4}", cols, rows);*/
+    let mut settings = Settings::init();
+    let args: Vec<String> = env::args().collect();
+    let ln = args.len();
+    for i in 1..ln {
+        match args[i].as_str() {
+            "-h" | "--help" => help(),
+            "-g" | "--glider" => settings.random = false,
+            "-r" | "--height" => {
+                if ln > i + 1 {
+                    settings.height = args[i + 1]
+                        .parse()
+                        .expect("Pass a number to height in rows");
+                    continue;
+                } else {
+                    println!("Pass a number to height in rows");
+                    std::process::exit(200)
+                }
+            }
+            "-w" | "--width" => {
+                if ln > i + 1 {
+                    settings.width = args[i + 1]
+                        .parse()
+                        .expect("Pass a number to width in columns");
+                    continue;
+                } else {
+                    println!("Pass a number to width in columns");
+                    std::process::exit(200)
+                }
+            }
+            "-s" | "--speed" => {
+                if ln > i + 1 {
+                    settings.speed = Duration::from_millis(
+                        args[i + 1]
+                            .parse()
+                            .expect("Pass a number to speed in milliseconds"),
+                    );
+                    continue;
+                } else {
+                    println!("Pass a number to speed in milliseconds");
+                    std::process::exit(200)
+                }
+            }
+            _ => continue,
+        }
+    }
+    let mut grid = crate::grid::Grid::init(settings.width, settings.height);
 
-    //let mut grid = Grid::new(rows as usize, cols as usize);
-    let mut grid = Grid::new(18, 18);
-
-    grid.toggle(20, 2);
-    grid.toggle(2, 3);
-    grid.toggle(2, 4);
-    grid.toggle(1, 4);
-    grid.toggle(0, 3);
+    if settings.random {
+        grid.randomize();
+    } else {
+        grid.toggle(2, 2);
+        grid.toggle(2, 3);
+        grid.toggle(2, 4);
+        grid.toggle(1, 4);
+        grid.toggle(0, 3);
+    }
 
     loop {
-        for y in 0..grid.height {
-            for x in 0..grid.width {
-                print!("{}", if grid.get(x, y) { "■" } else { "◦" });
+        for y in 0..settings.height {
+            for x in 0..settings.width {
+                print!(
+                    "{}",
+                    if grid.get(x as usize, y as usize) {
+                        "■"
+                    } else {
+                        "◦"
+                    }
+                );
             }
             println!();
         }
-        println!();
         grid.switch();
-        //std::io::stdin().read_line(&mut String::new());
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        std::thread::sleep(settings.speed);
     }
+}
+
+/*
+ * Very helpful function
+ */
+fn help() {
+    println!(
+        "A Game Of Life implemented in rust
+
+        Usage: gol [OPTIONS]
+
+        Options:
+          -h, --help            Show this message
+          -g, --glider          Show glider instead of random
+          -r, --height <number> Change height of the field
+          -w, --width <number>  Change width of the field
+          -s, --speed <number>  Set time between frames"
+    );
+    std::process::exit(0)
 }
